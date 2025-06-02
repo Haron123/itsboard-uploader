@@ -9,20 +9,56 @@ pub struct Gui
 	uploading: Arc<Mutex<bool>>,
 }
 
+const LINUX_COMMAND: &str = "../st-flash/linux/st-flash";
+const WIN_COMMAND: &str = r"..\st-flash\windows\st-flash.exe";
+
 fn upload(program: &str)
 {
-	let command = "../st-flash/linux/st-flash";
+	let command;
+	if cfg!(target_os = "linux")
+	{
+    	command = LINUX_COMMAND;
+    }
+    else if cfg!(target_os = "windows")
+    {
+     	command = WIN_COMMAND;
+    }
+    else
+    {
+        println!("Unsupported OS");
+        std::process::exit(1);
+    }
+
 	let args = ["--connect-under-reset", "--format", "ihex", "write", program];
 
 	let full_command = format!("{} {}", command, args.join(" "));
 	println!("Executing: {}", full_command);
 
-	let mut process = std::process::Command::new(command)
+	let mut process;
+	if cfg!(target_os = "linux")
+	{
+    	process = std::process::Command::new(command)
 		.args(&args)
 		.stdout(Stdio::inherit())
 		.stderr(Stdio::inherit())
 		.spawn()
 		.expect("Failed to execute st-flash");
+    }
+    else if cfg!(target_os = "windows")
+    {
+     	process = std::process::Command::new(command)
+     	.env("STLINK_CHIPS", "..\\st-flash\\windows")
+		.args(&args)
+		.stdout(Stdio::inherit())
+		.stderr(Stdio::inherit())
+		.spawn()
+		.expect("Failed to execute st-flash");
+    }
+    else
+    {
+        println!("Unsupported OS");
+        std::process::exit(1);
+    }
 
 	let status = process.wait().expect("Failed to wait on st-flash");
 }
