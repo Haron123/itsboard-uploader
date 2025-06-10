@@ -11,6 +11,7 @@ pub struct Gui
 
 const LINUX_COMMAND: &str = "../st-flash/linux/st-flash";
 const WIN_COMMAND: &str = r"..\st-flash\windows\st-flash.exe";
+const MAC_COMMAND: &str = "st-flash";
 
 fn upload(program: &str)
 {
@@ -23,6 +24,10 @@ fn upload(program: &str)
     {
      	command = WIN_COMMAND;
     }
+	else if cfg!(target_os = "macos")
+	{
+		command = MAC_COMMAND;
+	}
     else
     {
         println!("Unsupported OS");
@@ -35,19 +40,9 @@ fn upload(program: &str)
 	println!("Executing: {}", full_command);
 
 	let mut process;
-	if cfg!(target_os = "linux")
+	if cfg!(target_os = "linux") || cfg!(target_os = "windows") || cfg!(target_os = "macos")
 	{
     	process = std::process::Command::new(command)
-		.args(&args)
-		.stdout(Stdio::inherit())
-		.stderr(Stdio::inherit())
-		.spawn()
-		.expect("Failed to execute st-flash");
-    }
-    else if cfg!(target_os = "windows")
-    {
-     	process = std::process::Command::new(command)
-     	.env("STLINK_CHIPS", "..\\st-flash\\windows")
 		.args(&args)
 		.stdout(Stdio::inherit())
 		.stderr(Stdio::inherit())
@@ -103,6 +98,11 @@ impl eframe::App for Gui
 			ui.heading("ITS-Board Uploader v1.0");
 			ctx.set_visuals(Visuals::dark());
 
+			if !cfg!(target_os = "linux") || !cfg!(target_os = "windows") || !cfg!(target_os = "macos")
+			{
+				ui.label("Unsupported OS");
+			}
+
 			ComboBox::from_label("Choose a Programm to Upload")
 				.selected_text(format!("{:?}", self.selected_program))
 				.show_ui(ui, |ui|
@@ -114,7 +114,7 @@ impl eframe::App for Gui
 
 			ui.horizontal(|ui|
 			{
-				if ui.button(RichText::new("Upload").size(20.0)).clicked()
+				if ui.button(RichText::new("Upload").size(20.0).strong()).clicked()
 				{
 					if !self.start_uploading(self.selected_program.to_string())
 					{
